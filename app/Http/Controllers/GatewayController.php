@@ -3,19 +3,34 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Services\GatewayService;
+use Illuminate\Http\JsonResponse;
 
 class GatewayController extends Controller
 {
-    public function login(Request $request)
+    public function __construct(
+        protected GatewayService $gateway,
+    ) {
+
+    }
+
+    public function login(Request $request): JsonResponse
     {
-        // TODO: add service on business logic to authenticate user
+        $secretKey = $request->header('X-SECRET-KEY');
         extract($request->only(['email', 'password']));
 
-        return response()->json([
-            'request' => [
-                'email' => $email,
-                'password' => $password
-            ]
-        ]);
+        $response = $this->gateway->login($secretKey, $email, $password);
+
+        return response()->json($response);
+    }
+
+    public function logout(Request $request)
+    {
+        $secretKey = $request->header('X-SECRET-KEY');
+        $token = $request->bearerToken();
+
+        $response = $this->gateway->logout($secretKey, $token);
+
+        return response()->json($response);
     }
 }

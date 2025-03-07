@@ -112,4 +112,9 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    *   JWT Authentication Domain
+    */
+
+    'domain' => env('AUTH_SERVICE_URL', 'http://localhost'),
 ];

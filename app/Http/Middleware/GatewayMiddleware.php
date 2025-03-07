@@ -2,12 +2,13 @@
 
 namespace App\Http\Middleware;
 
+use App\Constants\Constants;
+use App\Models\ApplicationSettingsModel;
 use Closure;
 use Illuminate\Http\Request;
-use App\Models\ApplicationSettings;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
-use Illuminate\Support\Facades\Response as FacadesResponse;
 
 class GatewayMiddleware
 {
@@ -30,8 +31,13 @@ class GatewayMiddleware
             );
         }
 
-        // TODO: Add Redis Cache Here.
-        $settings = ApplicationSettings::where('api_key', $apiKey)->first();
+        $cacheKey = "key-{$apiKey}";
+        $settings = Cache::remember(
+            $cacheKey,
+            Constants::DEFAULT_CACHE_TIMEOUT_MIN,
+        function () use ($apiKey) {
+            return ApplicationSettingsModel::where('api_key', $apiKey)->first();
+        });
 
         if (!$settings) {
             return response()->json(['error' => 'Invalid API Key'], Response::HTTP_UNAUTHORIZED);
@@ -52,6 +58,8 @@ class GatewayMiddleware
 
             return response()->json(['error' => 'Invalid signature'], 403);
         }
+
+        $request->headers->set('X-SECRET-KEY', $secretKey);
 
         return $next($request);
     }

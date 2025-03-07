@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class ApplicationSettings extends Model
+class ApplicationSettingsModel extends Model
 {
+    protected $table = 'application_settings';
+
     /**
      * Get the attributes that should be cast.
      *
