@@ -35,7 +35,7 @@ class GatewayService
         return $response;
     }
 
-    public function hashToken(string $secretKey, string $token)
+    public function setHashToken(string $secretKey, string $token)
     {
         return hash_hmac('sha256', $token, $secretKey);
     }
@@ -53,7 +53,7 @@ class GatewayService
             ->collect();
 
         $token = $response->get('token');
-        $hashedToken = $this->hashToken($token, $secretKey);
+        $hashedToken = $this->setHashToken($token, $secretKey);
 
         $settings = Cache::remember(
             "key-info-{$hashedToken}",
@@ -70,8 +70,24 @@ class GatewayService
         $response = $this
             ->postAuth($route, [], $token);
 
-        if (!$response->successful()) {
+        if ($response->failed()) {
+            return [
+                'message' => 'Something went wrong !',
+            ];
         }
+
+        $this->removeCacheToken($token, $secretKey);
+
+        return [
+            'message' => 'Logged out successfully',
+        ];
+    }
+
+    public function refresh(string $secretKey, string $token)
+    {
+        $route = '/refresh';
+        $response = $this
+            ->postAuth($route, [], $token);
 
         if ($response->failed()) {
             return [
@@ -79,11 +95,27 @@ class GatewayService
             ];
         }
 
-        $hashedToken = $this->hashToken($token, $secretKey);
+        $this->removeCacheToken($token, $secretKey);
+
+        $response = $response->collect();
+        $newToken = $response->get('token');
+
+        $hashedToken = $this->setHashToken($newToken, $secretKey);
+
+        $response = Cache::remember(
+            "key-info-{$hashedToken}",
+            Constants::DEFAULT_CACHE_TIMEOUT_MIN,
+            fn () => $response
+        );
+
+        return $response;
+    }
+
+    private function removeCacheToken(string $token, string $secretKey)
+    {
+        $hashedToken = $this->setHashToken($token, $secretKey);
         Cache::forget("key-info-{$hashedToken}");
 
-        return [
-            'message' => 'Logged out successfully',
-        ];
+        return true;
     }
 }

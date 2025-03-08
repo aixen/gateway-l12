@@ -22,7 +22,7 @@ class VerifyTokenMiddleware
         $secretKey = $request->header('X-SECRET-KEY');
 
         $gatewayService = new GatewayService;
-        $hashedToken = $gatewayService->hashToken($token, $secretKey);
+        $hashedToken = $gatewayService->setHashToken($token, $secretKey);
         $jwtCachedData = Cache::get("key-info-{$hashedToken}");
         if (!$token || is_null($jwtCachedData)) {
             return response()->json(
