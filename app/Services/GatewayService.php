@@ -3,12 +3,17 @@
 namespace App\Services;
 
 use App\Constants\Constants;
+use App\Jobs\LogActivity;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 
 class GatewayService
 {
     protected $authDomain, $routePrefix;
+    protected $loginLogMessage = 'User Login';
+    protected $logoutLogMessage = 'User Logout';
+    protected $refreshLogMessage = 'User Refreshed Token';
+    protected $registrationLogMessage = 'User Registration';
 
     public function __construct()
     {
@@ -58,6 +63,12 @@ class GatewayService
             return $response->get('errors');
         }
 
+        LogActivity::dispatch($this->registrationLogMessage, [
+            'name' => $name,
+            'email' => $email,
+            'ip_request' => request()->ip(),
+        ]);
+
         return $response->collect();
     }
 
@@ -82,6 +93,8 @@ class GatewayService
             fn () => $response
         );
 
+        LogActivity::dispatch($this->loginLogMessage, $response->all());
+
         return $settings;
     }
 
@@ -96,6 +109,18 @@ class GatewayService
                 'message' => 'Something went wrong !',
             ];
         }
+
+        $hashedToken = $this->setHashToken($token, $secretKey);
+        $cachedData = Cache::get("key-info-{$hashedToken}");
+        $cachedUser = $cachedData->get('user');
+
+        LogActivity::dispatch(
+            $this->logoutLogMessage,
+            [
+                'name' => $cachedUser['name'],
+                'email' => $cachedUser['email'],
+            ]
+        );
 
         $this->removeCacheToken($token, $secretKey);
 
@@ -121,6 +146,18 @@ class GatewayService
 
             return $response->get('errors');
         }
+
+        $hashedToken = $this->setHashToken($token, $secretKey);
+        $cachedData = Cache::get("key-info-{$hashedToken}");
+        $cachedUser = $cachedData->get('user');
+
+        LogActivity::dispatch(
+            $this->refreshLogMessage,
+            [
+                'name' => $cachedUser['name'],
+                'email' => $cachedUser['email'],
+            ]
+        );
 
         $this->removeCacheToken($token, $secretKey);
 

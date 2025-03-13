@@ -2,8 +2,14 @@
 
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
+use Illuminate\Support\Facades\Log;
+use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\SyslogUdpHandler;
+use Elastic\Elasticsearch\ClientBuilder;
+use Monolog\Handler\ElasticSearchHandler;
+use Monolog\Formatter\ElasticsearchFormatter;
 use Monolog\Processor\PsrLogMessageProcessor;
+
 
 return [
 
@@ -127,6 +133,39 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
-    ],
+        'gateway' => [
+            'driver' => 'stack',
+            'channels' => ['elasticsearch', 'activity'],
+        ],
 
+        'activity' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/activity.log'),
+            'level' => 'info',
+        ],
+
+        'elasticsearch' => [
+            'driver' => 'monolog',
+            'handler' => ElasticSearchHandler::class,
+            'handler_with' => [
+                'client' => ClientBuilder::create()
+                    ->setHosts([env('ELASTICSEARCH_HOST', 'localhost:9200')])
+                    // ->setBasicAuthentication(env('ELASTICSEARCH_USERNAME'), env('ELASTICSEARCH_PASSWORD'))
+                    ->setRetries(3)
+                    ->build(),
+                'exception_handler' => function ($exception) {
+                    Log::error('Elasticsearch log failure: ' . $exception->getMessage());
+                },
+            ],
+            'options' => [
+                'index' => 'gateway-activity-logs-' . now()->format('Y.m'),
+                'type'  => '_doc',
+            ],
+            'formatter' => ElasticsearchFormatter::class,
+            'formatter_with' => [
+                'index' => 'gateway-activity-logs-' . now()->format('Y.m'),
+                'type'  => '_doc',
+            ],
+        ],
+    ],
 ];
