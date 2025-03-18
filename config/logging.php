@@ -1,13 +1,13 @@
 <?php
 
+use Elastic\Elasticsearch\ClientBuilder;
+use Illuminate\Support\Facades\Log;
+use Monolog\Formatter\ElasticsearchFormatter;
+use Monolog\Formatter\JsonFormatter;
+use Monolog\Handler\ElasticSearchHandler;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
-use Illuminate\Support\Facades\Log;
-use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\SyslogUdpHandler;
-use Elastic\Elasticsearch\ClientBuilder;
-use Monolog\Handler\ElasticSearchHandler;
-use Monolog\Formatter\ElasticsearchFormatter;
 use Monolog\Processor\PsrLogMessageProcessor;
 
 
